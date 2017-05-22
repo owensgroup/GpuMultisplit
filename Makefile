@@ -40,6 +40,13 @@ wms: obj/main_wms.o obj/random_generator.o src/kernels/wms/*.cuh src/main/main_w
 obj/main_wms.o: src/kernels/wms/*.cuh obj/random_generator.o src/main/main_wms.cu src/cpu_functions.h 
 	$(NVCC) $(ARCH) -D DEVICE_ID__=$(DEVICE) -D COMPUTE__=$(COMPUTE_CAPABILITY) -c -o obj/main_wms.o src/main/main_wms.cu $(INCLUDES)
 
+# Multisplit API (using BMS)
+multisplit: obj/main_multisplit.o obj/random_generator.o src/kernels/bms/*.cuh src/main/main_multisplit.cu src/cpu_functions.h 
+	$(NVCC) $(ARCH) -o bin/out_multisplit obj/main_multisplit.o obj/random_generator.o $(INCLUDES)
+
+obj/main_multisplit.o: src/kernels/bms/*.cuh obj/random_generator.o src/main/main_multisplit.cu src/cpu_functions.h 
+	$(NVCC) $(ARCH) -D DEVICE_ID__=$(DEVICE) -D COMPUTE__=$(COMPUTE_CAPABILITY) -c -o obj/main_multisplit.o src/main/main_multisplit.cu $(INCLUDES)
+
 # Key-only radix sort 
 sort: obj/main_sort.o src/api/*.cuh src/kernels/bms/*.cuh src/gpu_functions.cuh
 	$(NVCC) $(ARCH) -o bin/out_sort obj/main_sort.o $(INCLUDES)

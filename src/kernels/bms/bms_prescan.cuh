@@ -30,10 +30,11 @@ template<
 	uint32_t		NUM_ROLLS,
 	uint32_t 		NUM_BUCKETS,
 	uint32_t		LOG_BUCKETS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_prescan_256(
-	uint32_t* 	d_key_in,
+	KeyT* 			d_key_in,
 	uint32_t 		num_elements,
 	uint32_t* 	d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -58,7 +59,7 @@ BMS_prescan_256(
 				((warpId * NUM_ROLLS) << 5) + \
 				(i_roll << 5) + \
 				laneId;
-			uint32_t input_key = 	(temp_address < num_elements)?d_key_in[temp_address]:0xFFFFFFFF;
+			KeyT input_key = 	(temp_address < num_elements)?d_key_in[temp_address]:0xFFFFFFFF;
 			uint32_t myBucket = 	(temp_address < num_elements)?bucket_identifier(input_key):(NUM_BUCKETS - 1);
 
 			uint32_t myHisto = 0xFFFFFFFF;
@@ -75,7 +76,7 @@ BMS_prescan_256(
 		#pragma unroll 
 		for(int i_roll = 0; i_roll < NUM_ROLLS; i_roll++)
 		{
-			uint32_t input_key = d_key_in[\
+			KeyT input_key = d_key_in[\
 				(blockIdx.x * blockDim.x * NUM_ROLLS) + \
 				((warpId * NUM_ROLLS) << 5) + \
 				(i_roll << 5) + \
@@ -120,10 +121,11 @@ template<
 	uint32_t		NUM_ROLLS,
 	uint32_t		NUM_BUCKETS,
 	uint32_t		LOG_BUCKETS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_prescan_128(
-	uint32_t* 	d_key_in,
+	KeyT* 			d_key_in,
 	uint32_t 		num_elements,
 	uint32_t* 	d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -148,7 +150,7 @@ BMS_prescan_128(
 				((warpId * NUM_ROLLS) << 5) + \
 				(i_roll << 5) + \
 				laneId;
-			uint32_t input_key = (temp_address < num_elements)?d_key_in[temp_address]:0xFFFFFFFF;
+			KeyT input_key = (temp_address < num_elements)?d_key_in[temp_address]:0xFFFFFFFF;
 			uint32_t myBucket = (temp_address < num_elements)?bucket_identifier(input_key):(NUM_BUCKETS - 1);
 
 			uint32_t myHisto = 0xFFFFFFFF;
@@ -165,7 +167,7 @@ BMS_prescan_128(
 		#pragma unroll 
 		for(int i_roll = 0; i_roll < NUM_ROLLS; i_roll++)
 		{
-			uint32_t input_key = d_key_in[\
+			KeyT input_key = d_key_in[\
 				(blockIdx.x * blockDim.x * NUM_ROLLS) + \
 				((warpId * NUM_ROLLS) << 5) + \
 				(i_roll << 5) + \
@@ -205,10 +207,11 @@ BMS_prescan_128(
 //==================================
 template<
 	uint32_t		NUM_ROLLS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_prescan_64bucket_256(
-	uint32_t* 	d_key_in,
+	KeyT* 			d_key_in,
 	uint32_t 		num_elements,
 	uint32_t* 	d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -233,7 +236,7 @@ BMS_prescan_64bucket_256(
 				((warpId * NUM_ROLLS) << 5) + \
 				(i_roll << 5) + \
 				laneId;
-			uint32_t input_key = (temp_address < num_elements)?d_key_in[temp_address]:0xFFFFFFFF;
+			KeyT input_key = (temp_address < num_elements)?d_key_in[temp_address]:0xFFFFFFFF;
 			uint32_t myBucket = (temp_address < num_elements)?bucket_identifier(input_key):63;
 
 			uint32_t myHisto_lo = 0xFFFFFFFF; // for bucket 0-31
@@ -254,7 +257,7 @@ BMS_prescan_64bucket_256(
 		#pragma unroll 
 		for(int i_roll = 0; i_roll < NUM_ROLLS; i_roll++)
 		{
-			uint32_t input_key = d_key_in[
+			KeyT input_key = d_key_in[
 				(blockIdx.x * blockDim.x * NUM_ROLLS) + 
 				((warpId * NUM_ROLLS) << 5) + 
 				(i_roll << 5) + 
@@ -299,10 +302,11 @@ BMS_prescan_64bucket_256(
 //====================================
 template<
 	uint32_t		NUM_ROLLS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_prescan_128bucket_256(
-	uint32_t* 	d_key_in,
+	KeyT* 			d_key_in,
 	uint32_t 		num_elements,
 	uint32_t* 	d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -328,7 +332,7 @@ BMS_prescan_128bucket_256(
 				((warpId * NUM_ROLLS) << 5) + \
 				(i_roll << 5) + \
 				laneId;
-			uint32_t input_key = (temp_address < num_elements)?__ldg(&d_key_in[temp_address]):0xFFFFFFFF;
+			KeyT input_key = (temp_address < num_elements)?__ldg(&d_key_in[temp_address]):0xFFFFFFFF;
 			uint32_t myBucket = (temp_address < num_elements)?bucket_identifier(input_key):127;
 			
 			uint32_t rx_buffer_1 = __ballot(myBucket & 0x01);
@@ -358,7 +362,7 @@ BMS_prescan_128bucket_256(
 		#pragma unroll 
 		for(int i_roll = 0; i_roll < NUM_ROLLS; i_roll++)
 		{
-			uint32_t input_key = __ldg(&d_key_in[
+			KeyT input_key = __ldg(&d_key_in[
 				(blockIdx.x * blockDim.x * NUM_ROLLS) + 
 				((warpId * NUM_ROLLS) << 5) + 
 				(i_roll << 5) + 
@@ -410,10 +414,11 @@ BMS_prescan_128bucket_256(
 //================================================
 template<
 	uint32_t		NUM_ROLLS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_prescan_256bucket_256(
-	uint32_t* 	d_key_in,
+	KeyT* 			d_key_in,
 	uint32_t 		num_elements,
 	uint32_t* 	d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -441,7 +446,7 @@ BMS_prescan_256bucket_256(
 				((warpId * NUM_ROLLS) << 5) + \
 				(i_roll << 5) + \
 				laneId;
-			uint32_t input_key = (temp_address < num_elements)?d_key_in[temp_address]:0xFFFFFFFF;
+			KeyT input_key = (temp_address < num_elements)?d_key_in[temp_address]:0xFFFFFFFF;
 			uint32_t myBucket = (temp_address < num_elements)?bucket_identifier(input_key):255;
 
 			uint32_t myHisto_1 = 0xFFFFFFFF; // for bucket 0-31
@@ -476,7 +481,7 @@ BMS_prescan_256bucket_256(
 		#pragma unroll 
 		for(int i_roll = 0; i_roll < NUM_ROLLS; i_roll++)
 		{
-			uint32_t input_key = d_key_in[
+			KeyT input_key = d_key_in[
 				(blockIdx.x * blockDim.x * NUM_ROLLS) + 
 				((warpId * NUM_ROLLS) << 5) + 
 				(i_roll << 5) + 

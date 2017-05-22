@@ -22,11 +22,12 @@ template<
 	uint32_t		NUM_ROLLS,
 	uint32_t 		NUM_BUCKETS,
 	uint32_t		LOG_BUCKETS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_postscan_256(
-	const uint32_t* 	__restrict__ d_key_in,
-	uint32_t* 	__restrict__ d_key_out,
+	const KeyT* 	__restrict__ d_key_in,
+	KeyT* 	__restrict__ d_key_out,
 	uint32_t 		num_elements,
 	const uint32_t* 	__restrict__ d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -40,7 +41,7 @@ BMS_postscan_256(
 	uint32_t *local_histogram_smem	=		&smem[2 * NUM_BUCKETS];
 	uint32_t *keys_ms_smem = 						&smem[2 * NUM_BUCKETS + (NUM_BUCKETS * NUM_WARPS_8)];
 
-	uint32_t input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
+	KeyT 		input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
 	uint32_t myLocalIndex_list = 0;								// each byte contains localIndex per roll
 	uint32_t myBucket_list = 0;					// each byte contains bucket index per roll
 	uint32_t Histogram_list = 0;									
@@ -182,14 +183,14 @@ BMS_postscan_256(
 	#pragma unroll 
 	for(int kk = 0; kk<NUM_ROLLS; kk++)
 	{
-		input_key[1] = threadIdx.x + kk * blockDim.x;
-		input_key[0] = keys_ms_smem[input_key[1]];
+		uint32_t temp_index = threadIdx.x + kk * blockDim.x;
+		input_key[0] = keys_ms_smem[temp_index];
 		if(blockIdx.x == (gridDim.x - 1))
-			myBucket_list = ((input_key[1] + NUM_ROLLS * blockDim.x * blockIdx.x) < num_elements)?bucket_identifier(input_key[0]):(NUM_BUCKETS - 1);
+			myBucket_list = ((temp_index + NUM_ROLLS * blockDim.x * blockIdx.x) < num_elements)?bucket_identifier(input_key[0]):(NUM_BUCKETS - 1);
 		else
 			myBucket_list = bucket_identifier(input_key[0]);
 		myLocalIndex_list = global_histogram_smem[myBucket_list] // global offset
-							+ input_key[1] 										// local offset
+							+ temp_index 										// local offset
 							- __shfl(local_offset, myBucket_list, 32);
 		if(myLocalIndex_list < num_elements)						
 			d_key_out[myLocalIndex_list] = input_key[0];
@@ -200,11 +201,12 @@ template<
 	uint32_t		NUM_ROLLS,
 	uint32_t 		NUM_BUCKETS,
 	uint32_t		LOG_BUCKETS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_postscan_128(
-	const uint32_t* 	__restrict__ d_key_in,
-	uint32_t* 	__restrict__ d_key_out,
+	const KeyT* 	__restrict__ d_key_in,
+	KeyT* 	__restrict__ d_key_out,
 	uint32_t 		num_elements,
 	const uint32_t* 	__restrict__ d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -219,7 +221,7 @@ BMS_postscan_128(
 	uint32_t *local_histogram_smem	=		&smem[2 * NUM_BUCKETS];
 	uint32_t *keys_ms_smem = 						&smem[2 * NUM_BUCKETS + (NUM_BUCKETS * NUM_WARPS_4)];
 
-	uint32_t input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
+	KeyT input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
 	uint32_t myLocalIndex_list_first = 0;
 									// each byte contains localIndex per roll
 	uint32_t myLocalIndex_list_second = 0;
@@ -444,10 +446,10 @@ BMS_postscan_128(
 	#pragma unroll 
 	for(int kk = 0; kk<NUM_ROLLS; kk++)
 	{
-		input_key[1] = threadIdx.x + kk * blockDim.x;
-		input_key[0] = keys_ms_smem[input_key[1]];
+		uint32_t temp_index = threadIdx.x + kk * blockDim.x;
+		input_key[0] = keys_ms_smem[temp_index];
 		if(blockIdx.x == (gridDim.x - 1))
-			myBucket_list_first = ((input_key[1] + NUM_ROLLS * blockDim.x * blockIdx.x) < num_elements)?bucket_identifier(input_key[0]):(NUM_BUCKETS - 1);
+			myBucket_list_first = ((temp_index + NUM_ROLLS * blockDim.x * blockIdx.x) < num_elements)?bucket_identifier(input_key[0]):(NUM_BUCKETS - 1);
 		else
 			myBucket_list_first = bucket_identifier(input_key[0]);
 		myLocalIndex_list_first = global_histogram_smem[myBucket_list_first] // global offset
@@ -460,11 +462,12 @@ BMS_postscan_128(
 //====================================
 template<
 	uint32_t		NUM_ROLLS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_postscan_64bucket_256(
-	const uint32_t* 	__restrict__ d_key_in,
-	uint32_t* 	__restrict__ d_key_out,
+	const KeyT* 	__restrict__ d_key_in,
+	KeyT* 	__restrict__ d_key_out,
 	uint32_t 		num_elements,
 	const uint32_t* 	__restrict__ d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -478,7 +481,7 @@ BMS_postscan_64bucket_256(
 	uint32_t *local_histogram_smem	=		&smem[96];
 	uint32_t *keys_ms_smem = 						&smem[96 + (32 * NUM_WARPS_8)];
 
-	uint32_t input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
+	KeyT input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
 	uint32_t myLocalIndex_list = 0;								// each byte contains localIndex per roll
 	uint32_t myBucket_list = 0;					// each byte contains bucket index per roll
 	uint32_t Histogram_list_lo = 0; // for 0-31 buckets
@@ -631,15 +634,15 @@ BMS_postscan_64bucket_256(
 	#pragma unroll 
 	for(int kk = 0; kk<NUM_ROLLS; kk++)
 	{
-		input_key[1] = threadIdx.x + kk * blockDim.x;
-		input_key[0] = keys_ms_smem[input_key[1]];
+		uint32_t temp_index = threadIdx.x + kk * blockDim.x;
+		input_key[0] = keys_ms_smem[temp_index];
 		if(blockIdx.x == (gridDim.x - 1)){
-			myBucket_list = ((input_key[1] + NUM_ROLLS * blockIdx.x * blockDim.x) < num_elements)?bucket_identifier(input_key[0]):(63);
+			myBucket_list = ((temp_index + NUM_ROLLS * blockIdx.x * blockDim.x) < num_elements)?bucket_identifier(input_key[0]):(63);
 		}
 		else
 			myBucket_list = bucket_identifier(input_key[0]);	
 
-		myLocalIndex_list = global_histogram_smem[myBucket_list] + input_key[1]; 				
+		myLocalIndex_list = global_histogram_smem[myBucket_list] + temp_index; 				
 		uint32_t temp_local_warp =  __shfl(local_offset, myBucket_list & 0x1F, 32);
 		myLocalIndex_list -= ((myBucket_list & 0x20)?temp_local_warp >> 16:temp_local_warp & 0x0000FFFF);
 		if(myLocalIndex_list<num_elements)
@@ -649,11 +652,12 @@ BMS_postscan_64bucket_256(
 //==================================================
 template<
 	uint32_t		NUM_ROLLS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_postscan_128bucket_256(
-	const uint32_t* 	__restrict__ d_key_in,
-	uint32_t* 	__restrict__ d_key_out,
+	const KeyT* 	__restrict__ d_key_in,
+	KeyT* 	__restrict__ d_key_out,
 	uint32_t 		num_elements,
 	const uint32_t* 	__restrict__ d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -667,7 +671,7 @@ BMS_postscan_128bucket_256(
 	uint32_t *local_histogram_smem	=		&smem[2*96];
 	uint32_t *keys_ms_smem = 						&smem[2*96 + (64 * NUM_WARPS_8)];
 
-	uint32_t input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
+	KeyT input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
 	uint32_t myLocalIndex_list = 0;								// each byte contains localIndex per roll
 	uint32_t myBucket_list = 0;					// each byte contains bucket index per roll
 
@@ -903,10 +907,10 @@ BMS_postscan_128bucket_256(
 	#pragma unroll 
 	for(int kk = 0; kk<NUM_ROLLS; kk++)
 	{
-		input_key[1] = threadIdx.x + kk * blockDim.x;
-		input_key[0] = keys_ms_smem[input_key[1]];
+		uint32_t temp_index = threadIdx.x + kk * blockDim.x;
+		input_key[0] = keys_ms_smem[temp_index];
 		if(blockIdx.x == (gridDim.x - 1))
-			myBucket_list = ((input_key[1] + NUM_ROLLS * blockIdx.x * blockDim.x)<num_elements)?bucket_identifier(input_key[0]):127;
+			myBucket_list = ((temp_index + NUM_ROLLS * blockIdx.x * blockDim.x)<num_elements)?bucket_identifier(input_key[0]):127;
 		else
 			myBucket_list = bucket_identifier(input_key[0]);
 		myLocalIndex_list = global_histogram_smem[myBucket_list] + (threadIdx.x + kk * blockDim.x); 			
@@ -923,11 +927,12 @@ BMS_postscan_128bucket_256(
 //=============================================
 template<
 	uint32_t		NUM_ROLLS,
-	typename 		bucket_t>
+	typename 		bucket_t,
+	typename 		KeyT>
 __global__ void 
 BMS_postscan_256bucket_256(
-	const uint32_t* 	__restrict__ d_key_in,
-	uint32_t* 	__restrict__ d_key_out,
+	const KeyT* 	__restrict__ d_key_in,
+	KeyT* 	__restrict__ d_key_out,
 	uint32_t 		num_elements,
 	const uint32_t* 	__restrict__ d_histogram, 
 	bucket_t 		bucket_identifier)
@@ -941,7 +946,7 @@ BMS_postscan_256bucket_256(
 	uint32_t *local_histogram_smem	=		&smem[4*96];
 	uint32_t *keys_ms_smem = 						&smem[4*96 + (128 * NUM_WARPS_8)];
 
-	uint32_t input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
+	KeyT input_key[NUM_ROLLS]; 				// stores all keys regarding to this thread
 	uint32_t myLocalIndex_list = 0;								// each byte contains localIndex per roll
 	uint32_t myBucket_list = 0;					// each byte contains bucket index per roll
 
@@ -1291,10 +1296,10 @@ BMS_postscan_256bucket_256(
 	#pragma unroll 
 	for(int kk = 0; kk<NUM_ROLLS; kk++)
 	{
-		input_key[1] = threadIdx.x + kk * blockDim.x;
-		input_key[0] = keys_ms_smem[input_key[1]];
+		uint32_t temp_index = threadIdx.x + kk * blockDim.x;
+		input_key[0] = keys_ms_smem[temp_index];
 		if(blockIdx.x == (gridDim.x - 1))
-			myBucket_list = ((input_key[1] + NUM_ROLLS * blockIdx.x * blockDim.x)<num_elements)?bucket_identifier(input_key[0]):255;
+			myBucket_list = ((temp_index + NUM_ROLLS * blockIdx.x * blockDim.x)<num_elements)?bucket_identifier(input_key[0]):255;
 		else
 			myBucket_list = bucket_identifier(input_key[0]);
 		myLocalIndex_list = global_histogram_smem[myBucket_list] + (threadIdx.x + kk * blockDim.x); 			
