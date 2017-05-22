@@ -20,9 +20,10 @@ DOI: http://dx.doi.org/10.1145/2851141.2851169
 ## What does this code include?
 1. **Warp-wide Multisplit (WMS)**: This version of multisplit is suitable for small number of buckets up to 32. It operates independently on all warps within a thread-block without any intra-block synchronizations. [[test code](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_wms.cu)][[kernels](https://github.com/owensgroup/GpuMultisplit/tree/master/src/kernels/wms)] 
 2. **Block-wide Multisplit (BMS)**: This version is suitable for up to 256 buckets. Warps within a thread-block cooperate with each other to perform the multisplit. [[test code](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_bms.cu)][[kernels](https://github.com/owensgroup/GpuMultisplit/tree/master/src/kernels/bms)]
-3. **Multisplit-sort**: We use our BMS method to iteratively sort consecutive bits of an input element, i.e., building a radix sort. Our sort is competetive to CUB, especially when dealing with key-value scenarios. [[key-only](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_sort.cu)][[key-value](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_sort_pairs.cu)][[kernels](https://github.com/owensgroup/GpuMultisplit/blob/master/src/api/multisplit_sort.cuh)]   
-4. **Multisplit-histogram**: Modifying our WMS's prescan stage, we can implement a simple single-channel device-wide histogram suitable for up to 256 bins [[test code](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_histogram.cu)][[kernels](https://github.com/owensgroup/GpuMultisplit/tree/master/src/kernels/histogram)]  
-5. **Multisplit-compaction**: slightly modified version of our WMS method just for two buckets. [[test code](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_compaction.cu)][[kernels](https://github.com/owensgroup/GpuMultisplit/blob/master/src/kernels/compaction/multisplit2_compaction.cuh)]
+3. **Multisplit**: A simplified API for multisplit (it uses BMS), supporting up to 256 buckets [[multisplit test](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_multisplit.cu)][[API](https://github.com/owensgroup/GpuMultisplit/blob/master/src/api/multisplit.cuh)]. For more buckets (> 256), you should refer to the Reduced-bit sort method, as shown here [[RB-sort example](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_wms.cu#L534)]. 
+4. **Multisplit-sort**: We use our BMS method to iteratively sort consecutive bits of an input element, i.e., building a radix sort. Our sort is competetive to CUB, especially when dealing with key-value scenarios. [[key-only](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_sort.cu)][[key-value](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_sort_pairs.cu)][[kernels](https://github.com/owensgroup/GpuMultisplit/blob/master/src/api/multisplit_sort.cuh)]   
+5. **Multisplit-histogram**: Modifying our WMS's prescan stage, we can implement a simple single-channel device-wide histogram suitable for up to 256 bins [[test code](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_histogram.cu)][[kernels](https://github.com/owensgroup/GpuMultisplit/tree/master/src/kernels/histogram)]  
+6. **Multisplit-compaction**: slightly modified version of our WMS method just for two buckets. [[test code](https://github.com/owensgroup/GpuMultisplit/blob/master/src/main/main_compaction.cu)][[kernels](https://github.com/owensgroup/GpuMultisplit/blob/master/src/kernels/compaction/multisplit2_compaction.cuh)]
 ## How to use this code?
 1. Set the CUB directory accordingly in the Makefile [[CUB](https://github.com/NVlabs/cub)]
 2. Set the DEVICE and COMPUTE_CAPABILITY in the Makefile
@@ -30,6 +31,39 @@ DOI: http://dx.doi.org/10.1145/2851141.2851169
 4. `make <label>`: For example, for running BMS test files `make bms`.
 5. binary files will be stored in bin/: For example, for running key-only bms over 10 iterations (mode 1 in the main_bms.cu) we run: `./bin/out_bms -mode 1 -iter 10`
 
+## How to use this code in another project?
+`GpuMultisplit/src/` should be added to the build directory.
+#### Multisplit
+Example of using Multisplit in a code:
+  ```
+  #include "api/multisplit.cuh"
+  
+  // Initializing the multisplit:
+  multisplit_context ms_context(num_buckets);
+  multisplit_allocate_key_only(num_elements, ms_context);
+  
+  // key-only multisplit: 
+  multisplit_key_only(d_key_in, d_key_out, num_elements, ms_context, bucket_identifier);
+  
+  // releasing the allocated memory
+  multisplit_release_memory(ms_context);	
+  
+  ```
+#### Multisplit-sort:  
+```
+#include api/multisplit_sort.cuh
+
+// a radix sort with 7-bit radixes:
+ms_sort_context sort_context;
+multisplit_sort_7bit_allocate(num_elements, sort_context);
+
+// sorting:
+multisplit_sort_7bit(d_key_in, d_key_out, num_elements, sort_context);
+
+// releasing memory:
+multisplit_sort_release_memory(sort_context);
+
+```
 ## Reporting problems 
 To report bugs, please file an issue [here](https://github.com/owensgroup/GpuMultisplit/issues). 
 ## Developer:
