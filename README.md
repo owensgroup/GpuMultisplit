@@ -32,7 +32,8 @@ DOI: http://dx.doi.org/10.1145/2851141.2851169
 5. binary files will be stored in bin/: For example, for running key-only bms over 10 iterations (mode 1 in the main_bms.cu) we run: `./bin/out_bms -mode 1 -iter 10`
 
 ## How to use this code in another project?
-`GpuMultisplit/src/` should be added to the build directory.
+`GpuMultisplit/src/` should be added to the build directory. In the following we have included three examples for multisplit, multisplit-sort, and compaction. 
+
 #### Multisplit
 Example of using Multisplit in a code:
   ```
@@ -62,6 +63,21 @@ multisplit_sort_7bit(d_key_in, d_key_out, num_elements, sort_context);
 
 // releasing memory:
 multisplit_sort_release_memory(sort_context);
+
+```
+#### Multisplit compaction:
+```
+#include "kernels/compaction/multisplit2_compaction.cuh"
+
+// Initializing:
+compaction_context ms_context;
+compaction_allocate_key_only(num_elements, ms_context);
+
+ // performing compaction (multisplit with two buckets)
+compaction_key_only(d_key_in, d_key_out, num_elements, ms_context, bucket_identifier);
+
+// releasing memory:
+compaction_release_memory(ms_context);
 
 ```
 ## Reporting problems 
