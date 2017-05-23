@@ -80,6 +80,17 @@ compaction_key_only(d_key_in, d_key_out, num_elements, ms_context, bucket_identi
 compaction_release_memory(ms_context);
 
 ```
+#### Example of a bucket identifier:
+```
+struct delta_func : public std::unary_function<uint32_t, uint32_t> {
+  delta_func(uint32_t delta) : delta_(delta) {}
+  uint32_t delta_;
+  __forceinline__ __device__ __host__ uint32_t operator()(uint32_t a) const {
+    return (a/delta_);
+  }
+};
+
+```
 ## Reporting problems 
 To report bugs, please file an issue [here](https://github.com/owensgroup/GpuMultisplit/issues). 
 ## Developer:
