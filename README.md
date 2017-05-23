@@ -52,7 +52,7 @@ Example of using Multisplit in a code:
   ```
 #### Multisplit-sort:  
 ```
-#include api/multisplit_sort.cuh
+#include "api/multisplit_sort.cuh"
 
 // a radix sort with 7-bit radixes:
 ms_sort_context sort_context;
